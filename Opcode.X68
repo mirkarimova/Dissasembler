@@ -98,7 +98,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$C865, $8000
+     MOVE.W #$C85D, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -757,7 +757,7 @@ EA_BYTE
     MOVE.B  #14,D0
     TRAP    #15
 
-    JSR     EA_D_OUTPUT
+    JSR     DESTINATION_D_OUTPUT
     BRA     END
  
 EA_WORD
@@ -773,7 +773,7 @@ EA_WORD
     MOVE.B  #14,D0
     TRAP    #15
 
-    JSR     EA_D_OUTPUT
+    JSR     DESTINATION_D_OUTPUT
     BRA     END
     
 EA_LONG   
@@ -790,8 +790,21 @@ EA_LONG
     MOVE.B  #14,D0
     TRAP    #15
 
-    JSR     EA_D_OUTPUT
+    JSR     DESTINATION_D_OUTPUT
     BRA     END
+
+DESTINATION_D_OUTPUT *output 'D' and its value
+    LEA      MB10 ,A1
+    MOVE.B   #14, D0
+    TRAP     #15    
+    
+    *output D6 value
+    MOVE.W   D3,D1
+    MOVE.B   #3,D0
+    TRAP     #15     
+    RTS
+    
+    BRA      END
 ***************************************************************************************
 END
 
