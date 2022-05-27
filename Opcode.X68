@@ -33,6 +33,19 @@ START:                  ; first instruction of program
     *MOVE.W #%0101101001011101, $7000 *ADDQ    #5,(A5)+
     *MOVE.W #%0101101001100101, $7000 *ADDQ    #5,-(A5)
     *#%0101101001111000, $7000 *ADDQ    #5,$7000
+    *AND $8000,D4        *C879 00008000
+    *AND D4,$8000        *C779 00008000
+    
+    *AND (A5),D4         *C855 
+    *AND (A5)+,D4        *C85D
+    *AND -(A5),D4        *C865
+    
+    *AND D4,(A5)         *C955
+    *AND.B D4,(A5)       *C915
+    *AND.L D4,(A5)
+    *AND D4,(A5)+        *C95D
+    *AND D4,-(A5)        *C965
+    *AND D4,D5           *CA44
     
     ***************INPUT*******************************************
     LEA $100, A1
@@ -85,7 +98,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #%0101101001111000, $8000
+     MOVE.W #$C865, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -110,7 +123,11 @@ MI  CMP.W #%0100, (A2)
     
 AD CMP.W #%0101, (A2)
     BEQ ADDQ
-    BRA INVALID
+    BRA AND
+
+AND CMP.W #%1100, (A2)
+    BEQ   AND_OP
+    BRA   INVALID
     
 MI1
     *compare the full byte value to NOP bits value as NOP is full of default values
@@ -306,6 +323,8 @@ INDIRECT_EA_OUTPUT *output (A#)
     MOVE.B   #14, D0
     TRAP     #15
     
+    RTS
+    
     BRA     END
 
 INDIRECT_EA_PLUS_OUTPUT *output (A#)+
@@ -331,7 +350,9 @@ INDIRECT_EA_PLUS_OUTPUT *output (A#)+
     MOVE.B   #6,D0
     TRAP     #15
     
-    BRA     END    
+    RTS
+    
+    BRA      END    
 
 INDIRECT_EA_MINUS_OUTPUT    *output -(A#)
     *output - sign 
@@ -348,31 +369,32 @@ EA_D_OUTPUT *output 'D' and its value
     
     *output D6 value
     MOVE.W   D6,D1
-    MOVE.B  #3,D0
-    TRAP    #15     
+    MOVE.B   #3,D0
+    TRAP     #15     
+    RTS
     
-    BRA     END
+    BRA      END
     
 NOP_OUT *output 'NOP'
     LEA     NOPOUTPUT,A1
     MOVE.B   #14, D0
     TRAP     #15
 
-    BRA     END
+    BRA      END
     
 RTS_OUT *output 'RTS'
-    LEA     RTSOUTPUT,A1
+    LEA      RTSOUTPUT,A1
     MOVE.B   #14, D0
     TRAP     #15
     
-    BRA     END
+    BRA      END
     
 JSR_OUT *output (JSR)
-    LEA     JSROUTPUT,A1
+    LEA      JSROUTPUT,A1
     MOVE.B   #14, D0
     TRAP     #15   
 
-    BRA    INDIRECT_EA_OUTPUT
+    BRA      INDIRECT_EA_OUTPUT
 
 EA_MI
 
@@ -453,15 +475,19 @@ DATARANGE
     CMP     #%000,D5
     BEQ     EA_D_OUTPUT
     
+    *output (An)
     CMP     #%010,D5
     BEQ     INDIRECT_EA_OUTPUT
     
+    *output (An)+
     CMP     #%011,D5
     BEQ     INDIRECT_EA_PLUS_OUTPUT
     
+    *output -(An)
     CMP     #%100,D5
     BEQ     INDIRECT_EA_MINUS_OUTPUT
     
+    *output $value
     CMP     #%111, D5
     BEQ     EA_REGISTER
     
@@ -559,8 +585,214 @@ ED  LEA $300, A6
 ***************************************************************************************
 
 ***********************AND*************************************************************
+AND_OP
+    *separate the bytes in group of 3 bits
+    *D3 hold the register which is Dn or An, bits 11, 10, 9
+    CLR D3
+    MOVE.W D7, D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *D4 holds the opmode, bits 8,7,6
+    CLR D4
+    MOVE.W D7, D4
+    LSL.W #7, D4
+    LSR.W #8, D4
+    LSR.W #5, D4
 
+    *D5 holds the effective address mode value, bits 5,4,3
+    CLR D5
+    MOVE.W D7, D5
+    LSL.W #8, D5
+    LSL.W #2, D5
+    LSR.W #8, D5
+    LSR.W #5, D5
+    
+    *D6 holds the effective address register value, bits 2,1,0
+    CLR D6
+    MOVE.W D7, D6
+    LSL.W #8, D6
+    LSL.W #5, D6
+    LSR.W #8, D6
+    LSR.W #5, D6
+    
+    *output 'AND'
+    LEA     ANDOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *compare D4 to determine what type of opmode it has
+    *The value is Dn and Byte
+    CMP.W   #%100,D4
+    BEQ     D_BYTE
+    
+    *The value is Dn and Word
+    CMP.W   #%101,D4
+    BEQ     D_WORD
+    
+    *The value is Dn and Long
+    CMP.W   #%110,D4
+    BEQ     D_LONG
+    
+    *The value is An and Byte
+    CMP.W   #%000,D4
+    BEQ     EA_BYTE
+    
+    *The value is An and Word
+    CMP.W   #%001,D4
+    BEQ     EA_WORD
+    
+    *The value is An and Long
+    CMP.W   #%010,D4
+    BEQ     EA_LONG
+    
+    BRA     INVALID
+    
+D_BYTE
+    *output the size
+    LEA     MB19,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output 'D'
+    LEA     MB10,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output D value
+    MOVE.B  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    *output ,
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     AND_EA
+    BRA     END
+D_WORD
+    *output the size
+    LEA     MB17,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output 'D'
+    LEA     MB10,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output D value
+    MOVE.B  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    *output ,
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     AND_EA
+    
+    BRA     END
+D_LONG
+    *output the size
+    LEA     MB16,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output 'D'
+    LEA     MB10,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output D value
+    MOVE.B  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    *output ','
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     AND_EA
+    
+    BRA     END
+AND_EA
+    CMP     #%000,D5
+    BEQ     EA_D_OUTPUT
+    
+    *output (An)
+    CMP     #%010,D5
+    BEQ     INDIRECT_EA_OUTPUT
+    
+    *output (An)+
+    CMP     #%011,D5
+    BEQ     INDIRECT_EA_PLUS_OUTPUT
+    
+    *output -(An)
+    CMP     #%100,D5
+    BEQ     INDIRECT_EA_MINUS_OUTPUT
+    
+    *output $value
+    CMP     #%111, D5
+    BEQ     EA_REGISTER 
+    
+    RTS
+    
+    BRA     END
+    
+EA_BYTE
+    *output the size
+    LEA     MB17,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     AND_EA
+    
+    *output ','
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
 
+    JSR     EA_D_OUTPUT
+    BRA     END
+ 
+EA_WORD
+    *output the size
+    LEA     MB17,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     AND_EA
+    
+    *output ','
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+
+    JSR     EA_D_OUTPUT
+    BRA     END
+    
+EA_LONG   
+    *output the size
+    LEA     MB16,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *output the correct tpye of An and its value
+    JSR     AND_EA
+    
+    *output ','
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+
+    JSR     EA_D_OUTPUT
+    BRA     END
+***************************************************************************************
 END
 
     SIMHALT             ; halt simulator
@@ -590,9 +822,6 @@ NOTOUTPUT   DC.B    'NOT',0
 JSROUTPUT   DC.B    'JSR ',0
 INVALIDOUTPUT DC.B    'INVALID', 0
 ADDQOUTPUT DC.B 'ADDQ', 0
+ANDOUTPUT   DC.B    'AND',0
 
     END    START        ; last line of source
-
-
-
-
