@@ -98,7 +98,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$C879 , $8000
+     MOVE.W #$DBB9, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -1307,7 +1307,7 @@ NOTOUTPUT   DC.B    'NOT',0
 JSROUTPUT   DC.B    'JSR ',0
 INVALIDOUTPUT DC.B    'INVALID', 0
 ADDQOUTPUT DC.B 'ADDQ', 0
-ANDOUTPUT   DC.B    'AND ',0
-ADDOUTPUT   DC.B    'ADD ',0
+ANDOUTPUT   DC.B    'AND',0
+ADDOUTPUT   DC.B    'ADD',0
 
     END    START        ; last line of source
