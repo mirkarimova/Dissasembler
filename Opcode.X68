@@ -127,7 +127,12 @@ AD CMP.W #%0101, (A2)
 
 AND CMP.W #%1100, (A2)
     BEQ   AND_OP
-    BRA   INVALID
+    BRA   AddOrAdda
+    
+AddOrAdda
+    CMP.W #%1101, (A2)
+    BEQ AddOrAdda2
+    BRA INVALID
     
 MI1
     *compare the full byte value to NOP bits value as NOP is full of default values
@@ -810,6 +815,469 @@ DESTINATION_D_OUTPUT *output 'D' and its value
     
     BRA      END
 ***************************************************************************************
+
+*********Andy's code starts here *****************************************************************       
+AddOrAdda2
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #7, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    CMP.W #%011, D3
+    BEQ Adda
+    CMP.W #%111, D3
+    Beq Adda
+    
+    CMP.W #%000, D3
+    BEQ Add
+    CMP.W #%100, D3
+    BEQ Add
+    CMP.W #%001, D3
+    BEQ Add
+    CMP.W #%101, D3
+    BEQ Add
+    CMP.W #%010, D3
+    BEQ Add
+    CMP.W #%110, D3
+    BEQ Add    
+    BRA INVALID
+*determined if it is Adda    
+Adda 
+    *temp
+    BRA invalid
+    
+*determined if it is Add
+Add 
+    LEA      ADDOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    *opmode is still in d3
+    CMP.W #%000, D3
+    BEQ AddPrintB
+    CMP.W #%100, D3
+    BEQ AddPrintB
+    
+    CMP.W #%001, D3
+    BEQ AddPrintW
+    CMP.W #%101, D3
+    BEQ AddPrintW
+    
+    CMP.W #%110, D3
+    BEQ AddPrintL
+    CMP.W #%010, D3
+    BEQ AddPrintL
+    
+    BRA invalid
+*size printers
+AddPrintB
+    LEA      MB19, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    CMP.W #%000, D3
+    BEQ EAfirst
+    BRA DnFirst
+
+AddPrintW
+    LEA      MB17, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    CMP.W #%001, D3
+    BEQ EAfirst
+    BRA DnFirst
+
+AddPrintL
+    LEA      MB16, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    CMP.W #%010, D3
+    BEQ EAfirst
+    BRA DnFirst
+*end of size printers
+*this means source operand is first
+EAfirst
+    
+    *address is in a3
+    MOVE.W (A3), D3
+    *left 10, right 13
+    LSL.W #8, D3
+    LSL.W #2, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *if it is a word or a long address
+    CMP.W #%111, D3
+    BEQ AddPrintEA
+    *Before going to subroutine, change d1 based on EA register
+    
+    *else check for the 4 An modes
+    
+    *Now we know it is not .W or .L so we check what statement to output
+    * for the address register as the source
+    
+    *Dn
+    CMP.W #%000, D3
+    BEQ AddSourceDn
+    *we can use the same subroutine to print this stuff for DNfirst
+    
+    *An
+    CMP.W #%001, D3
+    BEQ AddSourceAn
+    
+    *(An)
+    CMP.W #%010, D3
+    BEQ AddSourcePAn
+    *(An)+
+    CMP.W #%011, D3
+    BEQ AddSourceIAn
+    *-(An)
+    CMP.W #%100, D3
+    BEQ AddSourceDAn
+    
+    BRA INVALID
+ 
+*Dn
+AddSourceDn
+    LEA      MB10, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.W D3, D1
+    MOVE.W #3, D0
+    TRAP #15
+    
+    BRA AddPrintDest
+
+*An
+AddSourceAn
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.W D3, D1
+    MOVE.W #3, D0
+    TRAP #15
+
+    BRA AddPrintDest
+
+*(An)
+AddSourcePAn
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    BRA AddPrintDest
+
+*(An)+
+AddSourceIAn
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    LEA      MB14, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA AddPrintDest
+
+*-(An)
+AddSourceDAn
+    LEA      MB15, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+   
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA AddPrintDest
+
+DnFirst
+*output the data register
+   LEA      MB10, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   CLR D3
+   MOVE.W (A3), D3
+   LSL.W #4, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   
+   
+   MOVE.W D3, D1
+   MOVE.B   #3, D0
+   TRAP     #15
+   
+   LEA      COMMAOUTPUT, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+    
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #2, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *if it is a word or a long address
+    CMP.W #%111, D3
+    BEQ DnFirstWL
+    
+    *(An)
+    CMP.W #%010, D3
+    BEQ DnAn
+    
+    *(An)+
+    CMP.W #%011, D3
+    BEQ DnAnPlus
+    
+    *-(An)
+    CMP.W #%100, D3
+    BEQ DnAnMinus
+    
+    BRA INVALID
+DnAn
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    BRA END
+DnAnPlus
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    LEA      MB14, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    BRA END
+DnAnMinus
+    LEA      MB15, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+   
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    BRA END
+   
+*find which one to output next
+*Destination wise, 3 of the (An) is allowed and .W and .L are too
+
+*word or long
+DnFirstWL
+   MOVE.W (A3), D3
+   LSL.W #8, D3
+   LSL.W #5, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   CMP.W #%000, D3
+   BEQ DnW
+   BRA DnL
+
+DnW
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #4, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   BRA END
+
+DnL
+   ADDA.L #2, A3
+   MOVE.L (A3), D2
+   MOVE.L #8, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   BRA END
+
+AddPrintEA
+   
+   MOVE.W (A3), D3
+   LSL.W #8, D3
+   LSL.W #5, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   CMP.W #%000, D3
+   BEQ AddPrintSourceW
+   BRA AddPrintSourceL
+
+AddPrintSourceW
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #4, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   
+   BRA AddPrintDest
+AddPrintSourceL
+   ADDA.L #2, A3
+   MOVE.L (A3), D2
+   MOVE.L #8, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   BRA AddPrintDest
+AddPrintDest
+   LEA      COMMAOUTPUT, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+   LEA      MB10, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+   
+   CLR D3
+   MOVE.W (A3), D3
+   LSL.W #4, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   
+   
+   MOVE.W D3, D1
+   MOVE.B   #3, D0
+   TRAP     #15
+   BRA END
+
+*this means BE
+*********Andy's code ends here ***************************************************************** 
+
+
 END
 
     SIMHALT             ; halt simulator
@@ -839,6 +1307,7 @@ NOTOUTPUT   DC.B    'NOT',0
 JSROUTPUT   DC.B    'JSR ',0
 INVALIDOUTPUT DC.B    'INVALID', 0
 ADDQOUTPUT DC.B 'ADDQ', 0
-ANDOUTPUT   DC.B    'AND',0
+ANDOUTPUT   DC.B    'AND ',0
+ADDOUTPUT   DC.B    'ADD ',0
 
     END    START        ; last line of source
