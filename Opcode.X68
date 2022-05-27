@@ -98,7 +98,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$C85D, $8000
+     MOVE.W #$C879 , $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -286,7 +286,7 @@ EA_REGISTER
     
     CMP     #%001, D6 *register (xxx).L
     BRA     REGISTER_L
-
+    
     BRA     INVALID
 
 ***********EA WORD and LONG*******************
@@ -296,12 +296,16 @@ REGISTER_W
      
     JSR     PRINT_EA
     
+    RTS
+    
     BRA     END
 REGISTER_L
     ADDA.L  #2,A3
     MOVE.L  (A3)+,D2
     
     JSR     PRINT_EA
+    
+    RTS
     
     BRA     END
 **********************************************
