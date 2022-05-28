@@ -47,6 +47,37 @@ START:                  ; first instruction of program
     *AND D4,-(A5)        *C965
     *AND D4,D5           *CA44
     
+    *OR.W       D0,D1     *8240
+    *OR.B       D0,D1     *8200
+    *OR.L       D0,D1     *8280
+    *OR.L       D2,$8000     *85B8
+    *OR.W       D3,$8000     *8779
+    *OR.B       D1,$8000     *8339
+    *OR.L       $8000,D2     *84B8
+    *OR.W       $8000,D6     *8C79
+    *OR.B       $8000,D1     *8238
+    *OR.W       D1,(A5)      *8355
+    *OR.B      (A5),D7       *8E15
+    *OR.W       D1,-(A3)     *8363
+    *OR.L      -(A5),D7      *8EA5
+    *OR.W       D1,(A3)+     *835B
+    *OR.L      (A5)+,D7      *8E9D
+    *OR.B        #11,D7      *8E3C
+    
+    *MOVEA.L   (A0),A3
+    *MOVEA.L    A3,A4
+    *MOVEA.L    D4,A4
+    *MOVEA.L     $8000,A4
+    *MOVEA.L   (A0)+,A3
+    *MOVEA.L   -(A0),A3
+    
+   * MOVE.L    D0,D1
+
+   * MOVE.L    D0,(A0)
+
+    *MOVE.L    D0,(A0)+
+
+    *MOVE.L    D0,-(A0)
     ***************INPUT*******************************************
     LEA $100, A1
     MOVE.B #2, D0
@@ -98,7 +129,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$DBB9, $8000
+     MOVE.W #$2100, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -117,23 +148,37 @@ NC  CLR D4
     LEA $6000, A2
     MOVE.W D3, (A2)
 *********My code starts here *****************************************************************    
-MI  CMP.W #%0100, (A2)
-    BEQ MI1
-    BRA AD
+MI  CMP.W   #%0100, (A2)
+    BEQ     MI1
+    BRA     AD
     
-AD CMP.W #%0101, (A2)
-    BEQ ADDQ
-    BRA AND
+AD CMP.W    #%0101, (A2)
+    BEQ     ADDQ
+    BRA     AND
 
 AND CMP.W #%1100, (A2)
     BEQ   AND_OP
     BRA   AddOrAdda
     
 AddOrAdda
-    CMP.W #%1101, (A2)
-    BEQ AddOrAdda2
-    BRA INVALID
+    CMP.W   #%1101, (A2)
+    BEQ     AddOrAdda2
+    BRA     OR
     
+OR  
+    CMP.W   #%1000, (A2)
+    BEQ     OR_OP
+    BRA     MOVE_TYPE_LONG
+    
+MOVE_TYPE_LONG
+    CMP.W   #%0010, (A2)
+    BEQ     MOVE_LONG_OP
+    BRA     CMP_MOVEQ
+    
+CMP_MOVEQ   
+    CMP.W #%0111, (A2)
+    BEQ CHECK_MOVEQ
+    BRA INVALID
 MI1
     *compare the full byte value to NOP bits value as NOP is full of default values
     CMP.W #%0100111001110001,D7
@@ -143,7 +188,7 @@ MI1
     CMP.W #%0100111001110101,D7
     BEQ   RTS_OUT    
     
-*separate the bytes in group of 3 bits
+    *separate the bytes in group of 3 bits
     *D3 hold the destination register for LEA, bits 11,10,9
     CLR D3
     MOVE.W D7, D3
@@ -383,6 +428,19 @@ EA_D_OUTPUT *output 'D' and its value
     RTS
     
     BRA      END
+
+EA_A_OUTPUT *output A#
+    LEA     MB11,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  D6,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    RTS
+    
+    BRA      END
     
 NOP_OUT *output 'NOP'
     LEA     NOPOUTPUT,A1
@@ -404,9 +462,6 @@ JSR_OUT *output (JSR)
     TRAP     #15   
 
     BRA      INDIRECT_EA_OUTPUT
-
-EA_MI
-
 
 *******************************************************************
 *********ADDQ*************************************************************************    
@@ -523,7 +578,8 @@ ADDQ_LONG
 INVALID 
     LEA      INVALIDOUTPUT , A1
     MOVE.B   #14, D0
-    TRAP     #15    
+    TRAP     #15  
+    BRA     END  
 **************************************************************************************** 
 
 *********OUTPUT_HEX*********************************************************************
@@ -730,6 +786,7 @@ D_LONG
     
     BRA     END
 AND_EA
+*output D
     CMP     #%000,D5
     BEQ     EA_D_OUTPUT
     
@@ -755,7 +812,7 @@ AND_EA
     
 EA_BYTE
     *output the size
-    LEA     MB17,A1
+    LEA     MB19,A1
     MOVE.B  #14,D0
     TRAP    #15
     
@@ -841,10 +898,6 @@ AddOrAdda2
     CMP.W #%110, D3
     BEQ Add    
     BRA INVALID
-*determined if it is Adda    
-Adda 
-    *temp
-    BRA invalid
     
 *determined if it is Add
 Add 
@@ -1165,6 +1218,7 @@ DnAnPlus
     TRAP     #15
 
     BRA END
+    
 DnAnMinus
     LEA      MB15, A1
     MOVE.B   #14, D0
@@ -1274,10 +1328,658 @@ AddPrintDest
    TRAP     #15
    BRA END
 
-*this means BE
-*********Andy's code ends here ***************************************************************** 
+********************************ADDA**************************************************************
+*determined it is Adda    
+Adda 
+    *opcode is stored in d3 and it is valid
+    LEA      ADDAOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    CMP.W #%011, D3
+    BEQ AddaW
+    BRA AddaL
+*determined if it is Add
+AddaW
+    LEA      MB17, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    BRA AddaPrintEA
 
+AddaL
+    LEA      MB16, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    BRA AddaPrintEA
+    
+AddaPrintEA
+    *address is in a3
+    MOVE.W (A3), D3
+    *left 10, right 13
+    LSL.W #8, D3
+    LSL.W #2, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *this takes care of .W, .L, and #
+    CMP.W #%111, D3
+    BEQ AddaWL
+    
+    *Dn
+    CMP.W #%000, D3
+    BEQ AddaDn
+    
+    *An
+    CMP.W #%001, D3
+    BEQ AddaAn
+    
+    *(An)
+    CMP.W #%010, D3
+    BEQ AddaPan
+    
+    *(An)+
+    CMP.W #%011, D3
+    BEQ AddaPlus
+    
+    *-(An)
+    CMP.W #%100, D3
+    BEQ AddaMinus
+    
+    
+    
+    
+*figure out if word or long or intermediate
+*intermediate is always stored in 8, so treat as a long
+*BUT output a different symbol    
+AddaWL
+   *address is in a3
+    MOVE.W (A3), D3
+    *left 13, right 13
+    LSL.W #8, D3
+    LSL.W #5, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *000 branch to Word
+    CMP.W #%000, D3
+    BEQ AddaWLW
+    
+    *001 branch to Long
+    CMP.W #%001, D3
+    BEQ AddaWLL
+    
+    *100 branch to intermediate
+    CMP.W #%100, D3
+    BEQ AddaWLI
+    *intermediate length based on opcode
+    
+    BRA INVALID
+    *branch invalid
+    
+AddaWLW
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #4, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   BRA AddaEnd
 
+AddaWLL
+   ADDA.L #2, A3
+   MOVE.L (A3), D2
+   MOVE.L #8, D1
+   JSR PRINT_EA
+   SUBA.L #2, A3
+   BRA AddaEnd
+
+AddaWLI
+   *address is in a3
+    MOVE.W (A3), D3
+    *left 13, right 13
+    LSL.W #7, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    *011 word size
+    CMP.W #%011, D3
+    BEQ AddaWLIW
+    BRA ADDAWLIL
+    
+AddaWLIW
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #4, D1
+   JSR PRINT_EA1
+   SUBA.L #2, A3
+   BRA AddaEnd    
+   
+ADDAWLIL
+   ADDA.L #2, A3
+   MOVE.L (A3), D2
+   MOVE.L #8, D1
+   JSR PRINT_EA1
+   SUBA.L #2, A3
+   BRA AddaEnd
+
+*Dn
+AddaDn
+   LEA      MB10, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+    
+   CLR D3
+   MOVE.W (A3), D3
+   LSL.W #8, D3
+   LSL.W #5, D3
+   
+   LSR.W #8, D3
+   LSR.W #5, D3
+    
+   MOVE.W D3, D1
+   MOVE.W #3, D0
+   TRAP #15
+   BRA AddaEnd
+
+*An
+AddaAn
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.W D3, D1
+    MOVE.W #3, D0
+    TRAP #15
+   BRA AddaEnd
+*(An)
+AddaPAn
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+   BRA AddaEnd
+*(An)+
+AddaPlus
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    
+    LEA      MB14, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+   BRA AddaEnd
+*-(An)
+AddaMinus
+    LEA      MB15, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+   
+    LEA      MB12, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    LEA      MB11, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+
+    CLR D3
+    MOVE.W (A3), D3
+    LSL.W #8, D3
+    LSL.W #5, D3
+    
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    MOVE.B D3, D1
+    MOVE.B #3, D0
+    TRAP #15
+    
+    LEA      MB13, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+   BRA AddaEnd
+
+AddaEnd
+   LEA      COMMAOUTPUT, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+   LEA      MB11, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+   MOVE.W (A3), D3
+   LSL.W #4, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   
+   CLR D1
+   MOVE.W D3, D1
+   MOVE.B #3, D0
+   TRAP #15
+   
+   BRA END
+********************************************END OF ADDA************************************************
+********************************Print # intermediate**********************************************
+PRINT_EA1
+   *LETS say hexadecimal is stored in d2
+   
+   *this program uses A6, A5, A1
+   LEA      MB18, A1
+   MOVE.B   #14, D0
+   TRAP     #15
+   
+   *code starts HERE:
+   MOVE.B #0, LoopVar1
+
+   *since 0 - 1000 is free, use that as memory
+   LEA $400, A1
+   LEA $200, A5
+   MOVE.L D2, (A5)
+   LEA $300, A6
+   
+FOR1 CMP.B #4, LoopVar1
+    BEQ NEXT1
+    CLR D7
+    MOVE.B (A5), D7
+    LSR.W #4, D7
+    MOVE.B D7, (A6)+    
+  
+    MOVE.B (A5), (A6)
+    SUBA.L #1, A6
+    
+    AND.B #$0F, (A6)+ 
+    AND.B #$0F, (A6)
+    
+ 
+    ADDA.L #1, A5
+    ADDA.L #1, A6
+    
+    ADDI.B #1, LoopVar1
+    BRA FOR1
+    
+NEXT1 MOVE.B #0, LoopVar1
+     LEA $300, A6
+     BRA N11
+     
+N11  CMP.B #8, LoopVar1
+    BEQ ED1
+    CMP.B #9, (A6)
+    BGT LETTER1
+    BRA NUMBER1
+    
+LETTER1 
+    ADDI.B #55, (A6)+
+    ADDI.B #1, LoopVar1
+    BRA N11
+
+NUMBER1 
+    ADDI.B #48, (A6)+
+    ADDI.B #1, LoopVar1
+    BRA N11
+    
+ED1  LEA $300, A6
+    MOVE.L (A6)+, (A1)+
+    MOVE.L (A6), (A1)
+    LEA $400, A1
+    MOVE.L #8, D1
+    MOVE.B #1, D0
+    TRAP #15
+     
+    RTS
+*************************************************************************************************
+
+******************OR_OP*************************************************************************
+OR_OP
+    *separate the bytes in group of 3 bits
+    *D3 hold the register which is Dn or An, bits 11, 10, 9
+    CLR D3
+    MOVE.W D7, D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *D4 holds the opmode, bits 8,7,6
+    CLR D4
+    MOVE.W D7, D4
+    LSL.W #7, D4
+    LSR.W #8, D4
+    LSR.W #5, D4
+
+    *D5 holds the effective address mode value, bits 5,4,3
+    CLR D5
+    MOVE.W D7, D5
+    LSL.W #8, D5
+    LSL.W #2, D5
+    LSR.W #8, D5
+    LSR.W #5, D5
+    
+    *D6 holds the effective address register value, bits 2,1,0
+    CLR D6
+    MOVE.W D7, D6
+    LSL.W #8, D6
+    LSL.W #5, D6
+    LSR.W #8, D6
+    LSR.W #5, D6
+    
+    *output 'AND'
+    LEA     OROUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    *compare D4 to determine what type of opmode it has
+    *The value is Dn and Byte
+    CMP.W   #%100,D4
+    BEQ     D_BYTE
+    
+    *The value is Dn and Word
+    CMP.W   #%101,D4
+    BEQ     D_WORD
+    
+    *The value is Dn and Long
+    CMP.W   #%110,D4
+    BEQ     D_LONG
+    
+    *The value is An and Byte
+    CMP.W   #%000,D4
+    BEQ     EA_BYTE
+    
+    *The value is An and Word
+    CMP.W   #%001,D4
+    BEQ     EA_WORD
+    
+    *The value is An and Long
+    CMP.W   #%010,D4
+    BEQ     EA_LONG
+    
+    BRA     INVALID
+*******************OR_OP END********************************************************************
+*******************MOVE_LONG_OP START***********************************************************
+MOVE_LONG_OP
+    *separate the bytes in group of 3 bits
+    *D3 hold the destination register for LEA, bits 11,10,9
+    CLR D3
+    MOVE.W D7, D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *D4 holds the default value %111 for LEA, bits 8,7,6
+    CLR D4
+    MOVE.W D7, D4
+    LSL.W #7, D4
+    LSR.W #8, D4
+    LSR.W #5, D4
+
+    *D5 holds the source mode value for LEA, bits 5,4,3
+    CLR D5
+    MOVE.W D7, D5
+    LSL.W #8, D5
+    LSL.W #2, D5
+    LSR.W #8, D5
+    LSR.W #5, D5
+    
+    *D6 holds the source register value for LEA, bits 2,1,0
+    CLR D6
+    MOVE.W D7, D6
+    LSL.W #8, D6
+    LSL.W #5, D6
+    LSR.W #8, D6
+    LSR.W #5, D6
+
+    CMP.W   #%001,D4 *if D4 is %001 then it is a MOVEA type
+    BEQ     MOVEA_LONG
+    
+    BRA     MOVE_LONG
+    
+    BRA     END
+
+MOVE_LONG
+    *output 'MOVE.L'
+    LEA     MOVEOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB16,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_EA *this will output the source address
+    
+    *output comma and destination adress A#
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_DESTINATION
+    
+    BRA     END
+    
+MOVEA_DESTINATION
+    CMP     #%000,D4
+    BEQ     D_DESTINATION
+    
+    CMP     #%010,D4
+    BEQ     INDIRECT_A_DESTINATION    
+    
+    CMP     #%011,D4
+    BEQ     INDIRECT_A_PLUS_DESTINATION
+    
+    CMP     #%100,D4
+    BEQ     INDIRECT_A_MINUS_DESTINATION
+    
+    RTS
+    
+    BRA     END
+
+D_DESTINATION
+    LEA     MB10,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    RTS
+    BRA     END
+
+A_DESTINATION
+    LEA     MB11,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    RTS
+    
+    BRA     END
+    
+INDIRECT_A_DESTINATION
+    LEA     MB12,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     A_DESTINATION
+    
+    LEA     MB13,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    RTS
+    BRA     END
+
+INDIRECT_A_PLUS_DESTINATION
+    JSR     INDIRECT_A_DESTINATION
+    *output + sign 
+    MOVE.W   #$2B,D1
+    MOVE.B   #6,D0
+    TRAP     #15
+
+    RTS
+    BRA     END  
+
+INDIRECT_A_MINUS_DESTINATION
+    *output - sign 
+    MOVE.W   #$2D,D1
+    MOVE.B   #6,D0
+    TRAP     #15
+    
+    JSR     INDIRECT_A_DESTINATION
+    
+    RTS
+    BRA     END    
+     
+MOVEA_LONG  
+    LEA     MOVEAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB16,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_EA
+    
+    *output comma and destination adress A#
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB11,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    BRA     END
+    
+MOVEA_EA *this method output all type of effective address
+*output D
+    CMP     #%000,D5
+    BEQ     EA_D_OUTPUT
+    
+    *output (An)
+    CMP     #%010,D5
+    BEQ     INDIRECT_EA_OUTPUT
+    
+    *output (An)+
+    CMP     #%011,D5
+    BEQ     INDIRECT_EA_PLUS_OUTPUT
+    
+    *output -(An)
+    CMP     #%100,D5
+    BEQ     INDIRECT_EA_MINUS_OUTPUT
+    
+    *output $value
+    CMP     #%111, D5
+    BEQ     EA_REGISTER 
+    
+    CMP     #%001,D5
+    BEQ     EA_A_OUTPUT
+    
+    RTS
+    
+    BRA     END
+    
+******************************************MOVEQ**********************************************
+CHECK_MOVEQ CLR D3
+           MOVE.W (A3), D7
+           LSR.W  #8, D7
+           AND.W  #%00000001, D7 *Checking bit 8 to make sure that it is 0
+           CMPI #0, D7 
+           BNE  INVALID * Right now just ending program if invalid 
+           MOVE.W (A3), D7
+           LSR.W #8, D7
+           LSR.W #1, D7
+           AND.W #%0000111, D7 *Checking bits 11 10 9 to make sure that it is valid data register
+           CMPI #7, D7
+           BGT INVALID
+           CMPI #0, D7
+           BLT INVALID
+           MOVE.B D7, D6 *Storing data register number of opcode in D3 
+           MOVE.W (A3),D7
+           AND.W #%0000000011111111, D7
+           MOVE.W D7, D1 *Storing source immediate data value in register D1 (# betw -127 and 127)
+           BRA PRINT_MOVEQ  *Clear d7/d6/d4/d1
+
+PRINT_MOVEQ LEA MOVEQOUTPUT, A1
+            MOVE.B #14, D0
+            TRAP #15
+            
+            LEA MB18, A1
+            MOVE.B #14, D0
+            TRAP #15
+            
+            MOVE.B #3, D0 * Outputting source immediate data value located in D1 
+            TRAP #15
+            
+            LEA COMMAOUTPUT, A1
+            MOVE.B #14, D0
+            TRAP #15
+            
+            JSR EA_D_OUTPUT
+            
+            CLR D7
+            CLR D6
+            CLR D4
+            CLR D0
+            CLR D1
+            BRA END 
+
+**************************************MOVEQ END****************************************************   
 END
 
     SIMHALT             ; halt simulator
@@ -1306,8 +2008,21 @@ RTSOUTPUT   DC.B    'RTS ',0
 NOTOUTPUT   DC.B    'NOT',0
 JSROUTPUT   DC.B    'JSR ',0
 INVALIDOUTPUT DC.B    'INVALID', 0
+
+*Add output
 ADDQOUTPUT DC.B 'ADDQ', 0
-ANDOUTPUT   DC.B    'AND',0
+ADDAOUTPUT  DC.B    'ADDA',0
 ADDOUTPUT   DC.B    'ADD',0
+
+*AND OR
+OROUTPUT    DC.B    'OR',0
+ANDOUTPUT   DC.B    'AND',0
+
+*MOVE output
+MOVEAOUTPUT DC.B    'MOVEA',0
+MOVEOUTPUT  DC.B    'MOVE',0
+MOVEQOUTPUT DC.B    'MOVEQ ',0
+
+
 
     END    START        ; last line of source
