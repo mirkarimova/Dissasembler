@@ -1,3 +1,5 @@
+
+   
 *-----------------------------------------------------------
 * Title      :
 * Written by :
@@ -178,7 +180,18 @@ MOVE_TYPE_LONG
 CMP_MOVEQ   
     CMP.W #%0111, (A2)
     BEQ CHECK_MOVEQ
+    BRA BCC
+    
+BCC 
+    CMP.W #%0110, (A2)
+    BEQ BCC2
+    BRA SUB
+
+SUB 
+    CMP.W #%1001, (A2)
+    BEQ SUB1
     BRA INVALID
+    
 MI1
     *compare the full byte value to NOP bits value as NOP is full of default values
     CMP.W #%0100111001110001,D7
@@ -1980,6 +1993,98 @@ PRINT_MOVEQ LEA MOVEQOUTPUT, A1
             BRA END 
 
 **************************************MOVEQ END****************************************************   
+
+*********SUB**************************************************************************************
+SUB1 
+     *Output 'Sub'
+     LEA      SUBOUTPUT, A1
+     MOVE.B   #14, D0
+     TRAP     #15
+     
+     CLR D3
+     MOVE.W (A3), D3
+     LSL.W #7, D3
+     LSR.W #8, D3
+     LSR.W #5, D3
+     
+    *SUB uses the same format as AddaW and AddaL
+    CMP.W #%011, D3
+    BEQ AddaW
+    BRA AddaL
+      
+
+*********SUB ENDS*********************************************************************************
+
+*********Bcc (BEQ, BLE, BGT, BRA)*****************************************************************
+BCC2
+    MOVE.W (A3), D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #4, D3
+    
+    CMP.W #%1111, D3
+    BEQ BLE
+    
+    CMP.W #%0111, D3
+    BEQ BEQ
+    
+    CMP.W #%1110, D3
+    BEQ BGT
+    
+    CMP.W #%0000, D3
+    BEQ BRRA
+    
+    BRA INVALID
+
+BLE LEA      BLEOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA BCC3
+
+BEQ LEA      BEQOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA BCC3
+
+BGT LEA      BGTOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA BCC3
+    
+BRRA
+    LEA      BRAOUTPUT, A1
+    MOVE.B   #14, D0
+    TRAP     #15
+    BRA BCC3
+
+BCC3 CLR D3
+     MOVE.W (A3), D3
+     LSL.W #8, D3
+     LSR.W #8, D3
+     
+     CMP.W #$FF, D3
+     BEQ  ScanLong
+     
+     CMP.W #$00, D3
+     BEQ ScanWord
+     
+     BRA ScanOp
+     
+ScanLong
+     BRA DnL
+
+ScanWord
+     Bra DnW
+
+ScanOp
+     CLR D2
+     MOVE.W D3, D2
+     MOVE.L #2, D1
+     BRA PRINT_EA
+
+
+********Bcc ends here************************************************************************
+
 END
 
     SIMHALT             ; halt simulator
@@ -2009,10 +2114,11 @@ NOTOUTPUT   DC.B    'NOT',0
 JSROUTPUT   DC.B    'JSR ',0
 INVALIDOUTPUT DC.B    'INVALID', 0
 
-*Add output
+*Add and sub output
 ADDQOUTPUT DC.B 'ADDQ', 0
 ADDAOUTPUT  DC.B    'ADDA',0
 ADDOUTPUT   DC.B    'ADD',0
+SUBOUTPUT  DC.B    'SUB',0
 
 *AND OR
 OROUTPUT    DC.B    'OR',0
@@ -2023,6 +2129,12 @@ MOVEAOUTPUT DC.B    'MOVEA',0
 MOVEOUTPUT  DC.B    'MOVE',0
 MOVEQOUTPUT DC.B    'MOVEQ ',0
 
+*comparator output
+BEQOUTPUT DC.B 'BEQ ', 0
+BLEOUTPUT DC.B 'BLE ', 0
+BGTOUTPUT DC.B 'BGT ', 0
+BRAOUTPUT DC.B 'BRA ', 0
 
 
     END    START        ; last line of source
+
