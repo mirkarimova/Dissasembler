@@ -206,6 +206,11 @@ MOVE_TYPE_WORD
 MOVE_BYTE
     CMP.W   #%0001, (A2)
     BEQ     MOVE_BYTE_OP
+    BRA     SHIFT_OP
+    
+SHIFT_OP
+    CMP.W   #%1110,(A2)
+    BEQ     CHECK_1110
     BRA     INVALID
     
 MI1
@@ -2288,6 +2293,556 @@ MOVEA_WORD
     
     BRA     END    
 ************************************************************************************
+*************** ANNA OPCODES 1110 *************************************************************************
+
+
+CHECK_1110 CLR D0
+           CLR D1
+           CLR D2
+           CLR D3
+           CLR D4
+           CLR D5
+           CLR D6
+           CLR D7
+           MOVE.W (A3),D7 
+           BRA MEMORYSHIFT_1110
+
+MEMORYSHIFT_1110 LSR #6, D7
+                 CMPI #%1110001111, D7 *LSL Memory shift 
+                 BEQ LSL_MEMSHIFT
+                 CMPI #%1110001011, D7 *LSR Memory shift
+                 BEQ LSR_MEMSHIFT
+                 CMPI #%1110000111, D7 *ASL Memory shift
+                 BEQ ASL_MEMSHIFT
+                 CMPI #%1110000011, D7 *ASR Memory shift
+                 BEQ ASR_MEMSHIFT
+                 CMPI #%1110011111, D7 *ROL Memory shift
+                 BEQ ROL_MEMSHIFT
+                 CMPI #%1110011011, D7 *ROR Memory shift
+                 BEQ ROR_MEMSHIFT
+                 BRA REGISTERSHIFT_1110
+
+LSX_MODE:
+         MOVE.W (A3), D7
+         LSR.W #3, D7
+         AND.W #%000000000111, D7 *Comparing mode bits 010:An 011:(An)+  100:(An)-  aka 2/3/4
+         CMPI #2, D7
+         BLT INVALID *INVALID
+         CMPI #4, D7
+         BGT INVALID *INVALID
+         MOVE.W D7, D2 *Storing mode in D2
+         RTS 
+
+
+AN_1110 LEA MB12, A1
+        MOVE.B #14, D0
+        TRAP #15
+        LEA MB11, A1
+        MOVE.B #14, D0
+        TRAP #15
+        MOVE.W D3, D1
+        MOVE.B #3, D0
+        TRAP #15
+        LEA MB13, A1
+        MOVE.B #14, D0
+        TRAP #15
+        BRA END *END 
+        
+ANP_1110 LEA MB12, A1
+         MOVE.B #14, D0
+         TRAP #15
+         LEA MB11, A1
+         MOVE.B #14, D0
+         TRAP #15
+         MOVE.W D3, D1
+         MOVE.B #3, D0
+         TRAP #15
+         LEA MB13, A1
+         MOVE.B #14, D0
+         TRAP #15
+         LEA MB14, A1
+         MOVE.B #14, D0
+         TRAP #15
+         BRA END *END 
+
+ANM_1110 LEA MB15, A1
+         MOVE.B #14, D0
+         TRAP #15
+         LEA MB12, A1
+         MOVE.B #14, D0
+         TRAP #15
+         LEA MB11, A1
+         MOVE.B #14, D0
+         TRAP #15
+         MOVE.W D3, D1
+         MOVE.B #3, D0
+         TRAP #15
+         LEA MB13, A1
+         MOVE.B #14, D0
+         TRAP #15
+         BRA END *END 
+
+LSL_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA LSLOUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+             
+             
+             
+LSR_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA LSROUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+             
+             
+ASL_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA ASLOUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+             
+             
+
+ASR_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA ASROUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+             
+             
+ROL_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA ROLOUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+             
+             
+ROR_MEMSHIFT MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7  *Checking the register # of EA bits 0 1
+             CMPI #7, D7
+             BGT INVALID * INVALID
+             CMPI #0, D7
+             BLT INVALID *INVALID 
+             MOVE.W D7, D3 *Moving the register number to D3 
+             JSR LSX_MODE *If it comes back printout
+             LEA ROROUTPUT, A1 
+             MOVE.B #14, D0
+             TRAP #15
+             CMPI #2, D2 *Printing out mode
+             BEQ AN_1110
+             CMPI #3, D2
+             BEQ ANP_1110
+             CMPI #4, D2
+             BEQ ANM_1110
+             BRA END *END 
+
+REGISTERSHIFT_1110 MOVE.W (A3), D7
+                   LSR.W #3, D7
+                   AND.W #%0000000000000011, D7 *Comparing bits 3 4
+                   CMPI #%01, D7
+                   BEQ LSLLSR_1000 
+                   CMPI #%00, D7
+                   BEQ ASLASR_1000
+                   CMPI #%11, D7
+                   BEQ ROLROR_1000
+                   BRA INVALID *Invalid 
+                   
+
+LSLLSR_1000 MOVE.W (A3), D7 *Determining if LSL/LSR 
+            LSR.W #8, D7
+            AND.W #%00000001, D7 *Comparing bit 8 1:left 0:right 
+            CMPI #%1, D7
+            BEQ LSL_REGSHIFT
+            CMPI #%0, D7
+            BEQ LSR_REGSHIFT
+            BRA INVALID *Invalid 
+
+
+SIZE_1110 CMPI #0, D4 *Printing size 0:B/ 1:W/ 2:L
+          BEQ BYTE_1110
+          CMPI #1, D4
+          BEQ WORD_1110
+          CMPI #2, D4
+          BEQ LONG_1110
+          BRA INVALID *Invalid 
+          
+BYTE_1110 LEA MB19, A1
+          MOVE.B #14, D0
+          TRAP #15
+          CMPI #0, D6 *Checking if data reg or shift count for 11 10 9 
+          BEQ SHIFT_1110
+          CMPI #1, D6
+          BEQ DREG_1110
+          BRA INVALID *Invalid 
+          
+WORD_1110 LEA MB17, A1
+          MOVE.B #14, D0
+          TRAP #15
+          CMPI #0, D6 *Checking if data reg or shift count for 11 10 9 
+          BEQ SHIFT_1110
+          CMPI #1, D6
+          BEQ DREG_1110
+          BRA INVALID *Invalid
+
+LONG_1110 LEA MB16, A1
+          MOVE.B #14, D0
+          TRAP #15
+          CMPI #0, D6 *Checking if data reg or shift count for 11 10 9 
+          BEQ SHIFT_1110
+          CMPI #1, D6
+          BEQ DREG_1110
+          BRA INVALID *Invalid 
+
+SHIFT8_1110 MOVEQ #8, D1
+            BRA ASHIFT8
+     
+SHIFT_1110 LEA MB18, A1 *Printing # 
+           MOVE.B #14, D0
+           TRAP #15
+           MOVE.W D5, D1 *Printing out shift count
+           CMPI #0, D1 *If value is 0 that represents 8 not 0 
+           BEQ SHIFT8_1110
+ASHIFT8    MOVE.B #3, D0
+           TRAP #15
+           LEA COMMAOUTPUT, A1
+           MOVE.B #14, D0
+           TRAP #15
+           LEA MB10, A1
+           MOVE.B #14, D0
+           TRAP #15
+           MOVE.B D3, D1
+           MOVE.B #3, D0
+           TRAP #15
+           BRA END
+
+DREG_1110  LEA MB10, A1
+           MOVE.B #14, D0
+           TRAP #15
+           MOVE.B D5, D1
+           MOVE.B #3, D0
+           TRAP #15
+           LEA COMMAOUTPUT, A1
+           MOVE.B #14, D0
+           TRAP #15
+           LEA MB10, A1
+           MOVE.B #14, D0
+           TRAP #15
+           MOVE.B D3, D1
+           MOVE.B #3, D0
+           TRAP #15
+           BRA END
+            
+LSL_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  
+             BLT INVALID *invalid 
+             CMPI #1, D7
+             BGT INVALID *invalid
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA LSLOUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110 
+
+
+LSR_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  *Bit 5 Either 0:shift count 1:data reg number
+             BLT INVALID *Invalid  
+             CMPI #1, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA LSROUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110 
+            
+            
+ASLASR_1000 MOVE.W (A3), D7 *Determining if ASL/ASR 
+            LSR.W #8, D7
+            AND.W #%00000001, D7 *Comparing bit 8 1:left 0:right 
+            CMPI #%1, D7
+            BEQ ASL_REGSHIFT
+            CMPI #%0, D7
+            BEQ ASR_REGSHIFT
+            BRA INVALID *Invalid 
+            
+ASL_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  
+             BLT INVALID *Invalid 
+             CMPI #1, D7
+             BGT INVALID *Invalid  
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA ASLOUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110  
+
+ASR_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  
+             BLT INVALID *Invalid 
+             CMPI #1, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA ASROUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110  
+
+ROLROR_1000 MOVE.W (A3), D7 *Determining if ROL/ROR 
+            LSR.W #8, D7
+            AND.W #%00000001, D7 *Comparing bit 8 1:left 0:right 
+            CMPI #%1, D7
+            BEQ ROL_REGSHIFT
+            CMPI #%0, D7
+            BEQ ROR_REGSHIFT
+            BRA INVALID *Invalid 
+            
+ROL_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  
+             BLT INVALID *Invalid 
+             CMPI #1, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA ROLOUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110 
+
+ROR_REGSHIFT MOVE.W (A3), D7 *Determining if operand shift count or data reg 
+             LSR.W #5, D7
+             AND.W #%00000000001, D7
+             CMPI #0, D7  
+             BLT INVALID *Invalid 
+             CMPI #1, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D6 *If valid then put into D6
+             MOVE.W (A3), D7
+             LSR.W #8, D7
+             LSR.W #1, D7
+             AND.W #%0000111, D7 *Shift count amount or data register number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid  
+             MOVE.W D7, D5 *Storing count/register number in D5
+             MOVE.W (A3), D7
+             LSR.W #6, D7
+             AND.W #%0000000011, D7 * Bits 6 7 size  (B/W/L)
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             CMPI #2, D7
+             BGT INVALID *Invalid 
+             MOVE.W D7, D4 * Storing (B/W/L) size in D4
+             MOVE.W (A3), D7
+             AND.W #%0000000000000111, D7 *Validing data reg number 
+             CMPI #7, D7
+             BGT INVALID *Invalid 
+             CMPI #0, D7
+             BLT INVALID *Invalid 
+             MOVE.W D7, D3 *Storing data reg # in D3 
+             LEA ROROUTPUT2, A1 *Printing LSL
+             MOVE.B #14, D0
+             TRAP #15
+             BRA SIZE_1110 
+
+
+************************************************************************************
 * opcodes branch here after being done
 * default address increment will be 2 bytes
 * if scanned byte after, increment by 1 byte
@@ -2354,6 +2909,22 @@ BEQOUTPUT DC.B 'BEQ ', 0
 BLEOUTPUT DC.B 'BLE ', 0
 BGTOUTPUT DC.B 'BGT ', 0
 BRAOUTPUT DC.B 'BRA ', 0
+
+*1110 output reg shift 
+LSLOUTPUT2 DC.B 'LSL', 0
+LSROUTPUT2 DC.B 'LSR', 0
+ASLOUTPUT2 DC.B 'ASL', 0
+ASROUTPUT2 DC.B 'ASR', 0
+ROLOUTPUT2 DC.B 'ROL', 0
+ROROUTPUT2 DC.B 'ROR', 0
+
+*1110 output mem shift 
+LSLOUTPUT DC.B 'LSL ', 0
+LSROUTPUT DC.B 'LSR ', 0
+ASLOUTPUT DC.B 'ASL ', 0
+ASROUTPUT DC.B 'ASR ', 0
+ROLOUTPUT DC.B 'ROL ', 0
+ROROUTPUT DC.B 'ROR ', 0
 
 
     END    START        ; last line of source
