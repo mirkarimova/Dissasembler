@@ -131,7 +131,7 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$2100, $8000
+     MOVE.W #$84B8, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
     MOVE.W   #$8000,$8002   *test input
@@ -610,7 +610,9 @@ PRINT_EA
    *LETS say hexadecimal is stored in d2
    
    *this program uses A6, A5, A1
-   
+   LEA      MB20, A1
+   MOVE.B   #14, D0
+   TRAP     #15
    
    *code starts HERE:
    MOVE.B #0, LoopVar1
@@ -662,11 +664,28 @@ NUMBER
     BRA N1
     
 ED  LEA $300, A6
+* this is if long
     MOVE.L (A6)+, (A1)+
     MOVE.L (A6), (A1)
-    LEA $400, A1
-    MOVE.L #8, D1
-    MOVE.B #1, D0
+    LEA $400, A1    
+    
+    CMP.B #2, D1
+    BEQ ED1
+    
+    CMP.B #4, D1
+    BEQ ED2
+    
+    BRA ED3
+
+ED1 ADDA.W #6, A1 
+    BRA ED4
+
+ED2 ADDA.L #4, A1
+    BRA ED4
+ED3   
+    BRA ED4 
+    
+ED4 MOVE.B #1, D0
     TRAP #15
      
     RTS
@@ -1310,10 +1329,50 @@ AddPrintEA
    LSL.W #5, D3
    LSR.W #8, D3
    LSR.W #5, D3
+   
    CMP.W #%000, D3
    BEQ AddPrintSourceW
+   
+   CMP.W #%100, D3
+   BEQ AddPrintIm
+   
    BRA AddPrintSourceL
-
+   
+AddPrintIM
+   MOVE.W (A3), D3
+   LSL.W #7, D3
+   LSR.W #8, D3
+   LSR.W #5, D3
+   CMP.W #%000, D3
+   BEQ AddPrintIMB
+   CMP.W #%001, D3
+   BEQ AddPrintIMW
+   BRA AddPrintIML
+   
+AddPrintIMB
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #2, D1
+   JSR PRINT_EA1
+   SUBA.L #2, A3
+   BRA AddPrintDest
+   
+AddPrintIMW
+   ADDA.L #2, A3
+   MOVE.W (A3), D2
+   MOVE.L #4, D1
+   JSR PRINT_EA1
+   SUBA.L #2, A3
+   BRA AddPrintDest
+   
+AddPrintIML
+   ADDA.L #2, A3
+   MOVE.B (A3), D2
+   MOVE.L #8, D1
+   JSR PRINT_EA1
+   SUBA.L #2, A3
+   BRA AddPrintDest
+   
 AddPrintSourceW
    ADDA.L #2, A3
    MOVE.W (A3), D2
@@ -1640,64 +1699,7 @@ PRINT_EA1
    MOVE.B   #14, D0
    TRAP     #15
    
-   *code starts HERE:
-   MOVE.B #0, LoopVar1
-
-   *since 0 - 1000 is free, use that as memory
-   LEA $400, A1
-   LEA $200, A5
-   MOVE.L D2, (A5)
-   LEA $300, A6
-   
-FOR1 CMP.B #4, LoopVar1
-    BEQ NEXT1
-    CLR D7
-    MOVE.B (A5), D7
-    LSR.W #4, D7
-    MOVE.B D7, (A6)+    
-  
-    MOVE.B (A5), (A6)
-    SUBA.L #1, A6
-    
-    AND.B #$0F, (A6)+ 
-    AND.B #$0F, (A6)
-    
- 
-    ADDA.L #1, A5
-    ADDA.L #1, A6
-    
-    ADDI.B #1, LoopVar1
-    BRA FOR1
-    
-NEXT1 MOVE.B #0, LoopVar1
-     LEA $300, A6
-     BRA N11
-     
-N11  CMP.B #8, LoopVar1
-    BEQ ED1
-    CMP.B #9, (A6)
-    BGT LETTER1
-    BRA NUMBER1
-    
-LETTER1 
-    ADDI.B #55, (A6)+
-    ADDI.B #1, LoopVar1
-    BRA N11
-
-NUMBER1 
-    ADDI.B #48, (A6)+
-    ADDI.B #1, LoopVar1
-    BRA N11
-    
-ED1  LEA $300, A6
-    MOVE.L (A6)+, (A1)+
-    MOVE.L (A6), (A1)
-    LEA $400, A1
-    MOVE.L #8, D1
-    MOVE.B #1, D0
-    TRAP #15
-     
-    RTS
+   BRA PRINT_EA
 *************************************************************************************************
 
 ******************OR_OP*************************************************************************
@@ -2025,7 +2027,7 @@ SUB1
 
 *********SUB ENDS*********************************************************************************
 
-*********Bcc (BEQ, BLE, BGT, BRA)*****************************************************************
+*********Andy Bcc (BEQ, BLE, BGT, BRA)*****************************************    
 BCC2
     MOVE.W (A3), D3
     LSL.W #4, D3
@@ -2037,6 +2039,9 @@ BCC2
     
     CMP.W #%0111, D3
     BEQ BEQ
+    
+    CMP.W #%1110, D3
+    BEQ BGT
     
     CMP.W #%1110, D3
     BEQ BGT
@@ -2093,7 +2098,7 @@ ScanOp
      BRA PRINT_EA
 
 
-********Bcc ends here************************************************************************
+********Andy Bcc ends here************************************************
 
 ******************MOVE_BYTE_OP******************************************************
 MOVE_BYTE_OP
@@ -2265,6 +2270,7 @@ MB16 DC.B      '.L ', 0
 MB17 DC.B      '.W ', 0
 MB18 DC.B      '#', 0
 MB19 DC.B      '.B ',0
+MB20 DC.B      '$',0
 
 LEAOUTPUT   DC.B    'LEA ',0
 COMMAOUTPUT DC.B    ', ',0
@@ -2297,4 +2303,3 @@ BRAOUTPUT DC.B 'BRA ', 0
 
 
     END    START        ; last line of source
-
