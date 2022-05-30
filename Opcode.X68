@@ -1,5 +1,4 @@
 
-   
 *-----------------------------------------------------------
 * Title      :
 * Written by :
@@ -133,10 +132,10 @@ NC  CLR D4
     
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$D098, $8000
+     MOVE.W #$3652, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
-    MOVE.W   #$60FC,$8002   *test input
+    MOVE.W   #$2685,$8002   *test input
     ******************************************************************
 ST  *increment address A3 by var amount AIV
     *set var AIV amount to 0 
@@ -374,20 +373,27 @@ REGISTER_W
     ADDI.L  #2, (AIV)
     
     ADDA.L  #2,A3    
-    MOVE.W  (A3)+,D2
-     
+    MOVE.W  (A3),D2
+    MOVE.L  #4,D1
+    
     JSR     PRINT_EA
+    
+    SUBA.L  #2,A3
     
     RTS
     
     BRA     END
+    
 REGISTER_L
     ADDI.L  #4, (AIV)
     
     ADDA.L  #2,A3
-    MOVE.L  (A3)+,D2
+    MOVE.L  (A3),D2
+    MOVE.L  #8,D1
     
     JSR     PRINT_EA
+    
+    SUBA.L  #2,A3
     
     RTS
     
