@@ -190,7 +190,17 @@ BCC
 SUB 
     CMP.W #%1001, (A2)
     BEQ SUB1
-    BRA INVALID
+    BRA MOVE_TYPE_WORD
+    
+MOVE_TYPE_WORD
+    CMP.W   #%0011, (A2)
+    BEQ     MOVE_WORD_OP
+    BRA     MOVE_BYTE
+    
+MOVE_BYTE
+    CMP.W   #%0001, (A2)
+    BEQ     MOVE_BYTE_OP
+    BRA     INVALID
     
 MI1
     *compare the full byte value to NOP bits value as NOP is full of default values
@@ -2084,6 +2094,156 @@ ScanOp
 
 
 ********Bcc ends here************************************************************************
+
+******************MOVE_BYTE_OP******************************************************
+MOVE_BYTE_OP
+    *separate the bytes in group of 3 bits
+    *D3 holds, bits 11,10,9
+    CLR D3
+    MOVE.W D7, D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *D4 holds, bits 8,7,6
+    CLR D4
+    MOVE.W D7, D4
+    LSL.W #7, D4
+    LSR.W #8, D4
+    LSR.W #5, D4
+
+    *D5 holds the source mode value, bits 5,4,3
+    CLR D5
+    MOVE.W D7, D5
+    LSL.W #8, D5
+    LSL.W #2, D5
+    LSR.W #8, D5
+    LSR.W #5, D5
+    
+    *D6 holds the source register value, bits 2,1,0
+    CLR D6
+    MOVE.W D7, D6
+    LSL.W #8, D6
+    LSL.W #5, D6
+    LSR.W #8, D6
+    LSR.W #5, D6
+
+    CMP.W   #%001,D4 *if D4 is %001 then it is invalid because it means the destination MODE is A#
+    BEQ     INVALID
+    
+    BRA     MOVE_BYTE_OUT
+    
+    BRA     END
+
+************************************************************************************
+******************MOVE_WORD_OP******************************************************
+MOVE_WORD_OP
+    *separate the bytes in group of 3 bits
+    *D3 holds, bits 11,10,9
+    CLR D3
+    MOVE.W D7, D3
+    LSL.W #4, D3
+    LSR.W #8, D3
+    LSR.W #5, D3
+    
+    *D4 holds, bits 8,7,6
+    CLR D4
+    MOVE.W D7, D4
+    LSL.W #7, D4
+    LSR.W #8, D4
+    LSR.W #5, D4
+
+    *D5 holds the source mode value, bits 5,4,3
+    CLR D5
+    MOVE.W D7, D5
+    LSL.W #8, D5
+    LSL.W #2, D5
+    LSR.W #8, D5
+    LSR.W #5, D5
+    
+    *D6 holds the source register value, bits 2,1,0
+    CLR D6
+    MOVE.W D7, D6
+    LSL.W #8, D6
+    LSL.W #5, D6
+    LSR.W #8, D6
+    LSR.W #5, D6
+
+    CMP.W   #%001,D4 *if D4 is %001 then it is a MOVEA type
+    BEQ     MOVEA_WORD
+    
+    BRA     MOVE_WORD
+    
+    BRA     END
+    
+MOVE_BYTE_OUT
+*output 'MOVE.L'
+    LEA     MOVEOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB19,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_EA *this will output the source address
+    
+    *output comma and destination adress A#
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_DESTINATION
+    
+    BRA     END
+    
+MOVE_WORD
+    *output 'MOVE.L'
+    LEA     MOVEOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB17,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_EA *this will output the source address
+    
+    *output comma and destination adress A#
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_DESTINATION
+    
+    BRA     END
+    
+MOVEA_WORD  
+    LEA     MOVEAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB17,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    JSR     MOVEA_EA
+    
+    *output comma and destination adress A#
+    LEA     COMMAOUTPUT,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    LEA     MB11,A1
+    MOVE.B  #14,D0
+    TRAP    #15
+    
+    MOVE.W  D3,D1
+    MOVE.B  #3,D0
+    TRAP    #15
+    
+    BRA     END    
+************************************************************************************
 
 END
 
