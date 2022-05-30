@@ -80,6 +80,8 @@ START:                  ; first instruction of program
 
     *MOVE.L    D0,-(A0)
     ***************INPUT*******************************************
+    
+INPUT1
     LEA $100, A1
     MOVE.B #2, D0
     TRAP   #15
@@ -87,6 +89,7 @@ START:                  ; first instruction of program
     MOVE.L    #0,D4
     MOVE.L    #8, D5    
     
+*input method for address $100    
 LP  CMP.L  D4, D5
     BEQ    NC
     ADDQ.L #1, D4
@@ -127,6 +130,58 @@ NC  CLR D4
     MOVE.B D4, $103
     
     MOVE.L  $100,A3
+    
+    MOVE.L #0, (AIV)
+
+*input method for address $110  
+INPUT2
+    LEA $110, A1
+    MOVE.B #2, D0
+    TRAP   #15
+    
+    MOVE.L    #0,D4
+    MOVE.L    #8, D5
+
+LP1  CMP.L  D4, D5
+    BEQ    NC1
+    ADDQ.L #1, D4
+    CMP.B  #58, (A1)
+    BLT    NE1
+    BRA    PO1
+   
+NE1  Subi.b #48,(A1)
+    Adda.l #1, A1
+    bra LP1
+
+PO1  Subi.b #55,(A1)
+    Adda.l #1, A1
+    bra LP1
+    
+NC1  CLR D4
+    MOVE.B $110, D4
+    MULU   #16, D4
+    ADD.B  $111, D4
+    MOVE.B D4, $110
+    
+    CLR D4
+    MOVE.B $112, D4
+    MULU   #16, D4
+    ADD.B  $113, D4
+    MOVE.B D4, $111
+    
+    CLR D4
+    MOVE.B $114, D4
+    MULU   #16, D4
+    ADD.B  $115, D4
+    MOVE.B D4, $112
+    
+    CLR D4
+    MOVE.B $116, D4
+    MULU   #16, D4
+    ADD.B  $117, D4
+    MOVE.B D4, $113
+    
+    MOVE.L  $110,A3
     
     MOVE.L #0, (AIV)
     
