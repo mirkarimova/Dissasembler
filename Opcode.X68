@@ -129,15 +129,22 @@ NC  CLR D4
     
     MOVE.L  $100,A3
     
+    MOVE.L #0, (AIV)
+    
     *************END_OF_INPUT***************************************
     *******************test input*************************************
-     MOVE.W #$84B8, $8000
+     MOVE.W #$D098, $8000
     
     *LEA     $7000,A3    *A3 is initialize by input
-    MOVE.W   #$8000,$8002   *test input
+    MOVE.W   #$60FC,$8002   *test input
     ******************************************************************
+ST  *increment address A3 by var amount AIV
+    *set var AIV amount to 0 
+    
+    ADDA.L  (AIV), A3
+    MOVE.L #0, (AIV)
+
     CLR D7
-    *MOVE.W #%0101101001111000, D7
     MOVE.W  (A3),D7
 
     CLR D3
@@ -147,7 +154,7 @@ NC  CLR D4
     LSR.W #8, D3
     LSR.W #4, D3
     
-    LEA $6000, A2
+    LEA $990, A2
     MOVE.W D3, (A2)
 *********My code starts here *****************************************************************    
 MI  CMP.W   #%0100, (A2)
@@ -364,7 +371,9 @@ EA_REGISTER
 
 ***********EA WORD and LONG*******************
 REGISTER_W 
-    ADDA.L  #2,A3
+    ADDI.L  #2, (AIV)
+    
+    ADDA.L  #2,A3    
     MOVE.W  (A3)+,D2
      
     JSR     PRINT_EA
@@ -373,6 +382,8 @@ REGISTER_W
     
     BRA     END
 REGISTER_L
+    ADDI.L  #4, (AIV)
+    
     ADDA.L  #2,A3
     MOVE.L  (A3)+,D2
     
@@ -1307,6 +1318,8 @@ DnFirstWL
    BRA DnL
 
 DnW
+   ADDI.L  #2, (AIV)
+   
    ADDA.L #2, A3
    MOVE.W (A3), D2
    MOVE.L #4, D1
@@ -1315,6 +1328,8 @@ DnW
    BRA END
 
 DnL
+   ADDI.L  #4, (AIV)
+   
    ADDA.L #2, A3
    MOVE.L (A3), D2
    MOVE.L #8, D1
@@ -1350,14 +1365,18 @@ AddPrintIM
    BRA AddPrintIML
    
 AddPrintIMB
+   ADDI.L  #1, (AIV)
+
    ADDA.L #2, A3
-   MOVE.W (A3), D2
+   MOVE.B (A3), D2
    MOVE.L #2, D1
    JSR PRINT_EA1
    SUBA.L #2, A3
    BRA AddPrintDest
    
 AddPrintIMW
+   ADDI.L  #2, (AIV)
+
    ADDA.L #2, A3
    MOVE.W (A3), D2
    MOVE.L #4, D1
@@ -1366,6 +1385,8 @@ AddPrintIMW
    BRA AddPrintDest
    
 AddPrintIML
+   ADDI.L  #4, (AIV)
+
    ADDA.L #2, A3
    MOVE.B (A3), D2
    MOVE.L #8, D1
@@ -1374,6 +1395,8 @@ AddPrintIML
    BRA AddPrintDest
    
 AddPrintSourceW
+   ADDI.L  #2, (AIV)
+
    ADDA.L #2, A3
    MOVE.W (A3), D2
    MOVE.L #4, D1
@@ -1382,6 +1405,8 @@ AddPrintSourceW
    
    BRA AddPrintDest
 AddPrintSourceL
+   ADDI.L  #4, (AIV)
+
    ADDA.L #2, A3
    MOVE.L (A3), D2
    MOVE.L #8, D1
@@ -1501,6 +1526,8 @@ AddaWL
     *branch invalid
     
 AddaWLW
+   ADDI.L  #2, (AIV)
+   
    ADDA.L #2, A3
    MOVE.W (A3), D2
    MOVE.L #4, D1
@@ -1509,6 +1536,8 @@ AddaWLW
    BRA AddaEnd
 
 AddaWLL
+   ADDI.L  #4, (AIV)
+   
    ADDA.L #2, A3
    MOVE.L (A3), D2
    MOVE.L #8, D1
@@ -1529,6 +1558,8 @@ AddaWLI
     BRA ADDAWLIL
     
 AddaWLIW
+   ADDI.L  #2, (AIV)
+   
    ADDA.L #2, A3
    MOVE.W (A3), D2
    MOVE.L #4, D1
@@ -1537,6 +1568,8 @@ AddaWLIW
    BRA AddaEnd    
    
 ADDAWLIL
+   ADDI.L  #4, (AIV)
+   
    ADDA.L #2, A3
    MOVE.L (A3), D2
    MOVE.L #8, D1
@@ -2249,8 +2282,20 @@ MOVEA_WORD
     
     BRA     END    
 ************************************************************************************
+* opcodes branch here after being done
+* default address increment will be 2 bytes
+* if scanned byte after, increment by 1 byte
+* if scanned word after, increment another 2 bytes
+* if scanned long after, increment by 4 bytes
+* branch to start, called ST
 
-END
+END ADDA.L #2, A3
+
+    LEA      MB9 ,A1
+    MOVE.B   #13, D0
+    TRAP     #15 
+    
+    BRA ST
 
     SIMHALT             ; halt simulator
 * Put variables and constants here
@@ -2258,8 +2303,11 @@ CR      EQU $0D
 LF      EQU $0A  
 
 LoopVar1    DC.B    1
+*address increment var
+AIV         DC.L    $80
 
 *common syntax
+MB9  DC.B      '', 0
 MB10 DC.B      'D', 0
 MB11 DC.B      'A', 0
 MB12 DC.B      '(', 0
